@@ -274,6 +274,7 @@ void LU_Blocks_parallel(double* &A, int n, int m, int b){
                     A[(j+i)*m+k+i] = A[(j+i)*m+i+k] - subA[(j - b)*(m-i-b)+k - b];
                 }
             }
+            delete[] subA;
         }
     }
 }
