@@ -298,41 +298,42 @@ int main() {
         B3[i] = A[i];
         B4[i] = A[i];
     }
-    long int t1 = clock();
+    double t1,t2;
+    t1 = omp_get_wtime();
     LU(B1,n,m);
-    long int t2 = clock();
-    double time1 = (double) (t2-t1)/CLOCKS_PER_SEC;
-    t1 = clock();
+    t2 = omp_get_wtime();;
+    double time1 = t2-t1;
+    t1 = omp_get_wtime();
     LU_parallel(B2,n,m);
-    t2 = clock();
+    t2 = omp_get_wtime();
     double err1 = 0;
     for (int i = 0; i < n*m; ++i) {
         if (err1 < std::abs(B1[i]-B2[i])) {
             err1 = std::abs(B1[i]-B2[i]);
         }
     }
-    double time2 = (double) (t2-t1)/CLOCKS_PER_SEC;
+    double time2 = t2-t1;
     int block = 32;
-    t1 = clock();
+    t1 = omp_get_wtime();
     LU_Blocks(B3,n,m,block);
-    t2 = clock();
+    t2 = omp_get_wtime();
     double err2 = 0;
     for (int i = 0; i < n*m; ++i) {
         if (err2 < std::abs(B1[i]-B3[i])) {
             err2 = std::abs(B1[i]-B3[i]);
         }
     }
-    double time3 = (double) (t2-t1)/CLOCKS_PER_SEC;
-    t1 = clock();
+    double time3 = t2-t1;
+    t1 = omp_get_wtime();
     LU_Blocks_parallel(B4,n,m,block);
-    t2 = clock();
+    t2 = omp_get_wtime();
     double err3 = 0;
     for (int i = 0; i < n*m; ++i) {
         if (err3 < std::abs(B1[i]-B4[i])) {
             err3 = std::abs(B1[i]-B4[i]);
         }
     }
-    double time4 = (double) (t2-t1)/CLOCKS_PER_SEC;
+    double time4 = t2-t1;
     std::cout << "Неблочное LU-разложение без распараллеливания" << std::endl << "Время: " <<
               time1 << std::endl <<"Неблочное LU-разложение с распараллеливанием" << std::endl << "Время " << time2 <<
               "  Ошибка в сравнении с первыи разложением: " << err1 << std::endl
