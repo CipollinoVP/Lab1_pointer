@@ -82,6 +82,7 @@ void LU_parallel(double* &A, int n, int m){
             A[j*m+i] = A[j*m+i]/A[i*m+i];
         }
         if (i<m){
+#pragma omp parallel for default(none) shared(A,i,n,m)
             for (int j = i+1; j < n; ++j) {
                 for (int k = i+1; k < m; ++k) {
                     A[j*m+k]=A[j*m+k]-A[j*m+i]*A[i*m+k];
@@ -311,8 +312,8 @@ int main() {
         }
     }
     double time2 = (double) (t2-t1)/CLOCKS_PER_SEC;
-    t1 = clock();
     int block = 32;
+    t1 = clock();
     LU_Blocks(B3,n,m,block);
     t2 = clock();
     double err2 = 0;
