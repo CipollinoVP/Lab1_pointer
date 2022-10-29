@@ -76,6 +76,7 @@ void LU_parallel(double* &A, int n, int m){
         return;
     }
     for (int i = 0; i < std::min(n-1,m); ++i) {
+#pragma omp parallel for default(none) shared(A,i,n,m)
         for (int j = i+1; j < n; ++j) {
             A[j*m+i] = A[j*m+i]/A[i*m+i];
         }
