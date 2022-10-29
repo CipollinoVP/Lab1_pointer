@@ -332,8 +332,7 @@ int main() {
         }
     }
     double time4 = (double) (t2-t1)/CLOCKS_PER_SEC;
-    std::ofstream ostream("./out.txt");
-    ostream << "Неблочное LU-разложение без распараллеливания" << std::endl << "Время: " <<
+    std::cout << "Неблочное LU-разложение без распараллеливания" << std::endl << "Время: " <<
               time1 << std::endl <<"Неблочное LU-разложение с распараллеливанием" << std::endl << "Время " << time2 <<
               "  Ошибка в сравнении с первыи разложением: " << err1 << std::endl
               << "Ускорение " << time1/time2 << std::endl
