@@ -282,7 +282,8 @@ int main() {
     omp_set_num_threads(4);
     int a = 5;
     srand(time(0));
-    int n = 4096;
+    int n;
+    std::cin >> n;
     int m;
     m = n;
     auto* A = new double[n*m];
@@ -312,7 +313,7 @@ int main() {
     }
     double time2 = (double) (t2-t1)/CLOCKS_PER_SEC;
     t1 = clock();
-    int block = 64;
+    int block = 32;
     LU_Blocks(B3,n,m,block);
     t2 = clock();
     double err2 = 0;
