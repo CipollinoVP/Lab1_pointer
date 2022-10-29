@@ -3,6 +3,7 @@
 #include "omp.h"
 #include "vector"
 #include "ctime"
+#include "fstream"
 
 double* inverse_L(double* const& L, int n){
     auto* res = new double[n*n];
@@ -281,9 +282,8 @@ int main() {
     omp_set_num_threads(4);
     int a = 5;
     srand(time(0));
-    int n;
+    int n = 512;
     int m;
-    std::cin >> n;
     m = n;
     auto* A = new double[n*m];
     auto* B1 = new double[n*m];
@@ -332,7 +332,8 @@ int main() {
         }
     }
     double time4 = (double) (t2-t1)/CLOCKS_PER_SEC;
-    std::cout << "Неблочное LU-разложение без распараллеливания" << std::endl << "Время: " <<
+    std::ofstream ostream("./out.txt");
+    ostream << "Неблочное LU-разложение без распараллеливания" << std::endl << "Время: " <<
               time1 << std::endl <<"Неблочное LU-разложение с распараллеливанием" << std::endl << "Время " << time2 <<
               "  Ошибка в сравнении с первыи разложением: " << err1 << std::endl
               << "Ускорение " << time1/time2 << std::endl
