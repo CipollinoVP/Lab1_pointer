@@ -313,7 +313,7 @@ int main() {
         }
     }
     double time2 = t2-t1;
-    int block = 32;
+    int block = 64;
     t1 = omp_get_wtime();
     LU_Blocks(B3,n,m,block);
     t2 = omp_get_wtime();
