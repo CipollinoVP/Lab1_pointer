@@ -204,12 +204,14 @@ void LU_Blocks_parallel(double* &A, int n, int m, int b){
     for (int i = 0; i<n-1; i+=b)
     {
         auto* subA = new double[(m-i)*b];
+#pragma omp parallel for default(none) shared(A,subA,i,m,b)
         for (int j = 0; j < m-i; ++j) {
             for (int k = 0; k < b; ++k) {
                 subA[j*b+k] = A[(j+i)*m+k+i];
             }
         }
         LU_parallel(subA,m-i,b);
+#pragma omp parallel for default(none) shared(A,subA,i,m,b)
         for (int j = 0; j < m-i; ++j) {
             for (int k = 0; k < b; ++k) {
                 A[(j+i)*m+k+i] = subA[j*b+k];
@@ -218,6 +220,7 @@ void LU_Blocks_parallel(double* &A, int n, int m, int b){
         delete[] subA;
         if ((int) m-i - b > 0) {
             auto* subL = new double[b*b];
+#pragma omp parallel for default(none) shared(A,subL,i,m,b)
             for (int j = 0; j < b; ++j) {
                 subL[j*b+j] = 1;
                 for (int k = j; k < b; ++k) {
@@ -230,6 +233,7 @@ void LU_Blocks_parallel(double* &A, int n, int m, int b){
             double* subL1 = inverse_L_parallel(subL,b);
             delete[] subL;
             subA = new double[b*(m-i - b)];
+#pragma omp parallel for default(none) shared(A,subA,i,m,b)
             for (int j = 0; j < b; ++j) {
                 for (int k = b; k < m-i; ++k) {
                     subA[j*(m-i - b)+k - b] = A[(j+i)*m+k+i];
@@ -238,6 +242,7 @@ void LU_Blocks_parallel(double* &A, int n, int m, int b){
             double* subA1 = prod_parallel(subL1,b,b,subA,b,m-i-b);
             delete[] subL1;
             delete[] subA;
+#pragma omp parallel for default(none) shared(A,subA1,i,m,b)
             for (int j = 0; j < b; ++j) {
                 for (int k = b; k < m-i; ++k) {
                     A[(j+i)*m+k+i] = subA1[j*(m-i-b)+k - b];
@@ -245,12 +250,14 @@ void LU_Blocks_parallel(double* &A, int n, int m, int b){
             }
             delete[] subA1;
             subA1 = new double[(m-i - b)*b];
+#pragma omp parallel for default(none) shared(A,subA1,i,m,b)
             for (int j = b; j < m-i; ++j) {
                 for (int k = 0; k < b; ++k) {
                     subA1[(j - b)*b+k] = A[(j+i)*m+k+i];
                 }
             }
             auto* subA2 = new double[b*(m-i - b)];
+#pragma omp parallel for default(none) shared(A,subA2,i,m,b)
             for (int j = 0; j < b; ++j) {
                 for (int k = b; k < m-i; ++k) {
                     subA2[j*(m-i-b)+k - b] = A[(j+i)*m+k+i];
@@ -259,6 +266,7 @@ void LU_Blocks_parallel(double* &A, int n, int m, int b){
             subA = prod_parallel(subA1,m-i-b,b,subA2,b,m-i-b);
             delete[] subA1;
             delete[] subA2;
+#pragma omp parallel for default(none) shared(A,subA,i,m,b)
             for (int j = b; j < m-i; ++j) {
                 for (int k = b; k < m-i; ++k) {
                     A[(j+i)*m+k+i] = A[(j+i)*m+i+k] - subA[(j - b)*(m-i-b)+k - b];
