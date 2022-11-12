@@ -5,22 +5,18 @@
 #include "ctime"
 #include "fstream"
 
-double* inverse_L(double* const& L, int n){
-    auto* res = new double[n*n];
-    for (int i = 0; i < n; ++i) {
-        for (int j = 0; j < n; ++j) {
-            res[i*n+j] = 0;
-        }
-        res[i*n+i] = 1;
-    }
+void inverse_L(double* & L, int n, int n1){
     for (int i = 0; i < n-1; ++i) {
         for (int j = i+1; j < n; ++j) {
             for (int k = 0; k < n; ++k) {
-                res[j*n+k] = res[j*n+k] - res[i*n+k]*L[j*n+i];
+                if ((i==0) && (k==0)) {
+                    L[j * n1 + k] = L[j * n1 + k] - L[i * n1 + k] * L[j * n1 + i];
+                } else {
+                    L[j * n1 + k] = L[j * n1 + k] -  L[j * n1 + i];
+                }
             }
         }
     }
-    return res;
 }
 
 double* inverse_L_parallel(double* const& L, int n){
@@ -134,74 +130,57 @@ double* difference(double* const& right, int r_n, int r_m,
 }
 
 void LU_Blocks(double* &A, int n, int m, int b){
+    auto *LU2223 = new double[n*b];
+    auto *U23 = new double[(n-b)*b];
     for (int i = 0; i<n-1; i+=b)
     {
-        auto* subA = new double[(m-i)*b];
+        int s1 = n-i;
+        int s2 = n-b-i;
         for (int j = 0; j < m-i; ++j) {
             for (int k = 0; k < b; ++k) {
-                subA[j*b+k] = A[(j+i)*m+k+i];
+                U23[j*b+k] = A[(j+i)*m+k+i];
             }
         }
-        LU(subA,m-i,b);
+        LU(U23,m-i,b);
         for (int j = 0; j < m-i; ++j) {
             for (int k = 0; k < b; ++k) {
-                A[(j+i)*m+k+i] = subA[j*b+k];
+                A[(j+i)*m+k+i] = U23[j*b+k];
             }
         }
-        delete[] subA;
+
         if ((int) m-i - b > 0) {
-            auto* subL = new double[b*b];
-            for (int j = 0; j < b; ++j) {
-                subL[j*b+j] = 1;
-                for (int k = j; k < b; ++k) {
-                    subL[j*b+k] = 0;
-                }
-                for (int k = 0; k < j; ++k) {
-                    subL[j*b+k] = A[(j+i)*m+k+i];
-                }
-            }
-            double* subL1 = inverse_L(subL,b);
-            delete[] subL;
-            subA = new double[b*(m-i - b)];
             for (int j = 0; j < b; ++j) {
                 for (int k = b; k < m-i; ++k) {
-                    subA[j*(m-i - b)+k - b] = A[(j+i)*m+k+i];
+                    LU2223[j*s2 + k - b] = A[(j+i)*m+k+i];
                 }
             }
-            double* subA1 = prod(subL1,b,b,subA,b,m-i-b);
-            delete[] subL1;
-            delete[] subA;
+            inverse_L(U23,b,s1);
             for (int j = 0; j < b; ++j) {
                 for (int k = b; k < m-i; ++k) {
-                    A[(j+i)*m+k+i] = subA1[j*(m-i-b)+k - b];
+                    A[j*(m-i - b)+ i+ k - b] = 0;
+                    for (int l = 0; l < b; ++l) {
+                        A[j*(m-i - b)+ i + k - b] += U23[j*s1+l]*LU2223[(k-b)*l+(k-b)];
+                    }
                 }
             }
-            delete[] subA1;
-            subA1 = new double[(m-i - b)*b];
-            for (int j = b; j < m-i; ++j) {
-                for (int k = 0; k < b; ++k) {
-                    subA1[(j - b)*b+k] = A[(j+i)*m+k+i];
-                }
-            }
-            auto* subA2 = new double[b*(m-i - b)];
             for (int j = 0; j < b; ++j) {
-                for (int k = b; k < m-i; ++k) {
-                    subA2[j*(m-i-b)+k - b] = A[(j+i)*m+k+i];
+                for (int k = 0; k < n-i-b; ++k) {
+                    U23[j*s2+k] = A[(i+b+j)*m+i+b+k];
                 }
             }
-            subA = prod(subA1,m-i-b,b,subA2,b,m-i-b);
-            delete[] subA1;
-            delete[] subA2;
-            for (int j = b; j < m-i; ++j) {
-                for (int k = b; k < m-i; ++k) {
-                    A[(j+i)*m+k+i] = A[(j+i)*m+i+k] - subA[(j - b)*(m-i-b)+k - b];
+            for (int j = 0; j < n-i-b; ++j) {
+                for (int k = 0; k < n-i-b; ++k) {
+                    A[j*(m-i - b)+ i+ k - b] = 0;
+                    for (int l = 0; l < b; ++l) {
+                        A[j*(m-i - b)+ i+ k - b] = U23[j*b+l]*LU2223[l*s2+k+b];
+                    }
                 }
             }
-            delete[] subA;
         }
     }
 }
 
+/*
 void LU_Blocks_parallel(double* &A, int n, int m, int b){
     for (int i = 0; i<n-1; i+=b)
     {
@@ -278,6 +257,7 @@ void LU_Blocks_parallel(double* &A, int n, int m, int b){
         }
     }
 }
+*/
 
 int main() {
     omp_set_dynamic(0);
@@ -315,7 +295,7 @@ int main() {
         }
     }
     double time2 = t2-t1;
-    int block = 64;
+    int block = 4;
     t1 = omp_get_wtime();
     LU_Blocks(B3,n,m,block);
     t2 = omp_get_wtime();
@@ -326,9 +306,6 @@ int main() {
         }
     }
     double time3 = t2-t1;
-    t1 = omp_get_wtime();
-    LU_Blocks_parallel(B4,n,m,block);
-    t2 = omp_get_wtime();
     double err3 = 0;
     for (int i = 0; i < n*m; ++i) {
         if (err3 < std::abs(B1[i]-B4[i])) {
@@ -336,13 +313,15 @@ int main() {
         }
     }
     double time4 = t2-t1;
-    std::cout << "Неблочное LU-разложение без распараллеливания" << std::endl << "Время: " <<
+    /*std::cout << "Неблочное LU-разложение без распараллеливания" << std::endl << "Время: " <<
               time1 << std::endl <<"Неблочное LU-разложение с распараллеливанием" << std::endl << "Время " << time2 <<
               "  Ошибка в сравнении с первыи разложением: " << err1 << std::endl
               << "Ускорение " << time1/time2 << std::endl
               << "Блочное LU-разложение без распараллеливания"<< std::endl << "Время: " << time3 << "  Ошибка в сравнении с первыи разложением: "
               << err2 << std::endl
               << "Блочное LU-разложение с распараллеливанием" << std::endl << "Время: " << time4
-              << "  Ошибка в сравнении с первыи разложением: " << err3 << std::endl << "Ускорение " << time3/time4 << std::endl;
+              << "  Ошибка в сравнении с первыи разложением: " << err3 << std::endl << "Ускорение " << time3/time4 << std::endl;*/
+    matrix_out(B1,n,n);
+    matrix_out(B3,n,n);
     return 0;
 }
