@@ -1,107 +1,36 @@
 #include <iostream>
-#include <cmath>
 #include "omp.h"
-#include "vector"
-#include "ctime"
-#include "fstream"
+#include <ctime>
+#include <cmath>
 
-void inverse_L(double* & L, int n, int n1){
-    for (int i = 0; i < n-1; ++i) {
-        for (int j = i+1; j < n; ++j) {
-            for (int k = 0; k < n; ++k) {
-                if ((i==0) && (k==0)) {
-                    L[j * n1 + k] = L[j * n1 + k] - L[i * n1 + k] * L[j * n1 + i];
-                } else {
-                    L[j * n1 + k] = L[j * n1 + k] -  L[j * n1 + i];
-                }
+
+using namespace std;
+
+//зануляет матрицу
+void clear_matrix(double* A, const int N) {
+    for (int i = 0; i < N; ++i)
+        for (int k = 0; k < N; ++k)
+            A[i * N + k] = 0;
+}
+
+//обычное умножение матриц для проверки ||A_ishod - L*U||
+void prod(const double* A, const double* B, double*& C, const int N) {
+    clear_matrix(C,N);
+    for (int i = 0; i < N; ++i) {
+        for (int k = 0; k < N; ++k) {
+            for (int j = 0; j < N; ++j) {
+                C[i * N + j] += A[i * N + k] * B[k * N + j];
             }
         }
     }
 }
 
-double* inverse_L_parallel(double* const& L, int n){
-    auto* res = new double[n*n];
-    for (int i = 0; i < n; ++i) {
-        for (int j = 0; j < n; ++j) {
-            res[i*n+j] = 0;
-        }
-        res[i*n+i] = 1;
-    }
-    for (int i = 0; i < n-1; ++i) {
-#pragma omp parallel for default(none) shared(res,i,L,n)
-        for (int j = i+1; j < n; ++j) {
-            for (int k = 0; k < n; ++k) {
-                res[j*n+k] = res[j*n+k] - res[i*n+k]*L[j*n+i];
-            }
-        }
-    }
-    return res;
-}
 
-double* prod(double* const& left, int l_n, int l_m,
-             double* const& right, int r_n, int r_m){
-    auto* res = new double[l_n*r_m];
-    for (int i = 0; i < l_n; ++i) {
-        for (int j = 0; j < r_m; ++j) {
-            res[i*r_m + j] = 0;
-            for (int k = 0; k < r_n; ++k) {
-                res[i*r_m+j] = res[i*r_m+j] + left[i*l_m+k]*right[k*r_m+j];
-            }
-        }
-    }
-    return res;
-}
-
-double* prod_parallel(double* const& left, int l_n, int l_m,
-             double* const& right, int r_n, int r_m){
-    auto* res = new double[l_n*r_m];
-#pragma omp parallel for default(none) shared(res,left,right,l_n,l_m,r_n,r_m)
-    for (int i = 0; i < l_n; ++i) {
-        for (int j = 0; j < r_m; ++j) {
-            res[i*r_m + j] = 0;
-            for (int k = 0; k < r_n; ++k) {
-                res[i*r_m+j] = res[i*r_m+j] + left[i*l_m+k]*right[k*r_m+j];
-            }
-        }
-    }
-    return res;
-}
-
-
-void LU_parallel(double* &A, int n, int m){
-    if (A == nullptr){
-        return;
-    }
-    for (int i = 0; i < std::min(n-1,m); ++i) {
-#pragma omp parallel for default(none) shared(A,i,n,m)
-        for (int j = i+1; j < n; ++j) {
-            A[j*m+i] = A[j*m+i]/A[i*m+i];
-        }
-        if (i<m){
-#pragma omp parallel for default(none) shared(A,i,n,m)
-            for (int j = i+1; j < n; ++j) {
-                for (int k = i+1; k < m; ++k) {
-                    A[j*m+k]=A[j*m+k]-A[j*m+i]*A[i*m+k];
-                }
-            }
-        }
-    }
-}
-
-void LU(double* &A, int n, int m){
-    if (A == nullptr){
-        return;
-    }
-    for (int i = 0; i < std::min(n-1,m); ++i) {
-        for (int j = i+1; j < n; ++j) {
-            A[j*m+i] = A[j*m+i]/A[i*m+i];
-        }
-        if (i<m){
-            for (int j = i+1; j < n; ++j) {
-                for (int k = i+1; k < m; ++k) {
-                    A[j*m+k]=A[j*m+k]-A[j*m+i]*A[i*m+k];
-                }
-            }
+// копирует матрицу B в матрицу C
+void copy_matrix(const double* B, double*& C, const int N) {
+    for (int i = 0; i < N; i++) {
+        for (int j = 0; j < N; j++) {
+            C[i * N + j] = B[i * N + j];
         }
     }
 }
@@ -118,6 +47,249 @@ void matrix_out(double* const& A, int n, int m){
     }
 }
 
+
+void rand_fill(double* A, const int N) {
+    srand(time(nullptr));
+
+    for (int i = 0; i < N; i++)
+        for (int j = 0; j < N; j++) {
+            A[i * N + j] = (rand() % 100 + 1);
+        }
+}
+
+// обычное LU (для квадратных)
+void LU(double* A, const int n, int m) {
+    if (A == nullptr){
+        return;
+    }
+    for (int i = 0; i < std::min(n-1,m); ++i) {
+        for (int j = i+1; j < n; ++j) {
+            A[j*m+i] = A[j*m+i]/A[i*m+i];
+        }
+        if (i<m){
+            for (int j = i+1; j < n; ++j) {
+                for (int k = i+1; k < m; ++k) {
+                    A[j*m+k]=A[j*m+k]-A[j*m+i]*A[i*m+k];
+                }
+            }
+        }
+    }
+}
+
+// обычное LU (для квадратных) параллельное
+void LU_parallel(double* A, const int n, const int m)
+{
+    if (A == nullptr){
+        return;
+    }
+    for (int i = 0; i < std::min(n-1,m); ++i) {
+#pragma omp parallel for default(none) shared(A,i,n,m)
+        for (int j = i+1; j < n; ++j) {
+            A[j*m+i] = A[j*m+i]/A[i*m+i];
+        }
+        if (i<m){
+#pragma omp parallel for default(none) shared(A,i,n,m)
+            for (int j = i+1; j < n; ++j) {
+                for (int k = i+1; k < m; ++k) {
+                    A[j*m+k]=A[j*m+k]-A[j*m+i]*A[i*m+k];
+                }
+            }
+        }
+    }
+}
+
+void inverse_L(double* & L, int n, int n1){
+    auto* L1 = new double[n*n];
+    for (int i = 0; i < n; ++i) {
+        for (int j = 0; j < n; ++j) {
+            L1[i*n+j] = 0;
+        }
+        L1[i*n+i] = 1;
+    }
+    for (int i = 0; i < n-1; ++i) {
+        for (int k = i+1; k < n; ++k) {
+            for (int j = 0; j < i+1; ++j) {
+                L1[k*n+j] -= L1[i*n+j]*L[k*n1+i];
+            }
+        }
+    }
+    for (int i = 0; i < n; ++i) {
+        for (int j = 0; j < i; ++j) {
+            L[i*n1+j] = L1[i*n+j];
+        }
+    }
+    delete[] L1;
+}
+
+
+void inverse_L_parallel(double* & L, int n, int n1){
+    auto* L1 = new double[n*n];
+    for (int i = 0; i < n; ++i) {
+#pragma omp parallel for default(none) shared(L,n,L1,n1,i)
+        for (int j = 0; j < n; ++j) {
+            L1[i*n+j] = 0;
+        }
+        L1[i*n+i] = 1;
+    }
+    for (int i = 0; i < n-1; ++i) {
+        for (int k = i+1; k < n; ++k) {
+#pragma omp parallel for default(none) shared(L,n,i,L1,k,n1)
+            for (int j = 0; j < i+1; ++j) {
+                L1[k*n+j] -= L1[i*n+j]*L[k*n1+i];
+            }
+        }
+    }
+    for (int i = 0; i < n; ++i) {
+#pragma omp parallel for default(none) shared(L,n,i,L1,n1)
+        for (int j = 0; j < i; ++j) {
+            L[i*n1+j] = L1[i*n+j];
+        }
+    }
+    delete[] L1;
+}
+
+//алгоритм 2.10
+void two_ten(double*& A, int n, int b) {
+    int a1 = n;
+    int a2 = n - b;
+    auto* L2232 = new double[a1 * b];
+    auto* U23 = new double[b * a2];
+
+    for (int i = 0; i < n - 1; i += b) {
+        a1 = (n - i);
+        a2 = (n - b - i);
+
+        //(1)
+        for (int y = 0; y < a1; y++)
+            for (int z = 0; z < b; z++) {
+                L2232[y * b + z] = A[(y + i) * n + (i + z)];
+            }
+
+        LU(L2232, a1, b);
+
+        for (int y = 0; y < (a1); y++)
+            for (int z = 0; z < b; z++) {
+                A[(y + i) * n + (i + z)] = L2232[y * b + z];
+            }
+        //(1)
+
+        if ((n - b - i) > 0) {
+            //(2)
+            for (int y = 0; y < b; y++) {
+                for (int z = 0; z < a2; z++) {
+                    U23[y*a2 + z] = A[(y + i) * n + z + i + b];
+                }
+            }
+            inverse_L(L2232,b,b);
+            for (int y = 0; y < b; y++) {
+                for (int z = 0; z < (a2); z++) {
+                    A[(y + i) * n + z + i + b] = 0;
+                    for (int j = 0; j < b; ++j) {
+                        if (y>j) {
+                            A[(y + i) * n + z + i + b] += L2232[y * b + j] * U23[j * a2 + z];
+                        } else if (y==j){
+                            A[(y + i) * n + z + i + b] += U23[j * a2 + z];
+                        }
+                    }
+                }
+            }
+            //(2)
+
+            //(3)
+            for (int y = 0; y < b; y++) {
+                for (int z = 0; z < a2; z++) {
+                    U23[y*a2 + z] = A[(y + i) * n + z + i + b];
+                }
+            }
+            for (int p = b; p < a1; ++p) {
+                for (int k = b; k < a1; ++k) {
+                    for (int q = 0; q < b; ++q) {
+                        A[(i+p)*n+ i+ k] -= L2232[p * b + q] * U23[q * a2 + k - b];        //(n-i-b) это a2
+                    }
+                }
+            }
+            //(3)
+        }
+    }
+    delete[] L2232;
+    delete[] U23;
+}
+
+
+
+
+//Алгоритм 2.10 параллельный
+void two_ten_parallel(double*& A, int n, int b) {
+    int a1 = n;
+    int a2 = n - b;
+    auto* L2232 = new double[a1 * b];
+    auto* U23 = new double[b * a2];
+
+    for (int i = 0; i < n - 1; i += b) {
+        a1 = (n - i);
+        a2 = (n - b - i);
+
+        //(1)
+        for (int y = 0; y < a1; y++)
+#pragma omp parallel for default(none) shared(L2232,n,i,A,b,y)
+            for (int z = 0; z < b; z++) {
+                L2232[y * b + z] = A[(y + i) * n + (i + z)];
+            }
+
+        LU_parallel(L2232, a1, b);
+
+        for (int y = 0; y < (a1); y++)
+#pragma omp parallel for default(none) shared(L2232,n,i,A,b,y)
+                for (int z = 0; z < b; z++) {
+                A[(y + i) * n + (i + z)] = L2232[y * b + z];
+            }
+        //(1)
+
+        if ((n - b - i) > 0) {
+            //(2)
+            for (int y = 0; y < b; y++) {
+#pragma omp parallel for default(none) shared(n,i,A,b,y,a2,U23)
+                for (int z = 0; z < a2; z++) {
+                    U23[y*a2 + z] = A[(y + i) * n + z + i + b];
+                }
+            }
+            inverse_L_parallel(L2232,b,b);
+#pragma omp parallel for default(none) shared(L2232,n,i,A,b,a2,U23)
+            for (int y = 0; y < b; y++) {
+                for (int z = 0; z < (a2); z++) {
+                    A[(y + i) * n + z + i + b] = 0;
+                    for (int j = 0; j < b; ++j) {
+                        if (y>j) {
+                            A[(y + i) * n + z + i + b] += L2232[y * b + j] * U23[j * a2 + z];
+                        } else if (y==j){
+                            A[(y + i) * n + z + i + b] += U23[j * a2 + z];
+                        }
+                    }
+                }
+            }
+            //(2)
+
+            //(3)
+            for (int y = 0; y < b; y++) {
+                for (int z = 0; z < a2; z++) {
+                    U23[y*a2 + z] = A[(y + i) * n + z + i + b];
+                }
+            }
+#pragma omp parallel for default(none) shared(L2232,n,i,A,b,U23,a2,a1)
+            for (int p = b; p < a1; ++p) {
+                for (int k = b; k < a1; ++k) {
+                    for (int q = 0; q < b; ++q) {
+                        A[(i+p)*n+ i+ k] -= L2232[p * b + q] * U23[q * a2 + k - b];        //(n-i-b) это a2
+                    }
+                }
+            }
+            //(3)
+        }
+    }
+    delete[] L2232;
+    delete[] U23;
+}
+
 double* difference(double* const& right, int r_n, int r_m,
                    double* const& left){
     auto* result = new double[r_n*r_m];
@@ -129,135 +301,6 @@ double* difference(double* const& right, int r_n, int r_m,
     return result;
 }
 
-void LU_Blocks(double* &A, int n, int m, int b){
-    auto *LU2223 = new double[n*b];
-    auto *U23 = new double[(n-b)*b];
-    for (int i = 0; i<n-1; i+=b)
-    {
-        int s1 = n-i;
-        int s2 = n-b-i;
-        for (int j = 0; j < m-i; ++j) {
-            for (int k = 0; k < b; ++k) {
-                U23[j*b+k] = A[(j+i)*m+k+i];
-            }
-        }
-        LU(U23,m-i,b);
-        for (int j = 0; j < m-i; ++j) {
-            for (int k = 0; k < b; ++k) {
-                A[(j+i)*m+k+i] = U23[j*b+k];
-            }
-        }
-
-        if ((int) m-i - b > 0) {
-            for (int j = 0; j < b; ++j) {
-                for (int k = b; k < m-i; ++k) {
-                    LU2223[j*s2 + k - b] = A[(j+i)*m+k+i];
-                }
-            }
-            inverse_L(U23,b,s1);
-            for (int j = 0; j < b; ++j) {
-                for (int k = b; k < m-i; ++k) {
-                    A[j*(m-i - b)+ i+ k - b] = 0;
-                    for (int l = 0; l < b; ++l) {
-                        A[j*(m-i - b)+ i + k - b] += U23[j*s1+l]*LU2223[(k-b)*l+(k-b)];
-                    }
-                }
-            }
-            for (int j = 0; j < b; ++j) {
-                for (int k = 0; k < n-i-b; ++k) {
-                    U23[j*s2+k] = A[(i+b+j)*m+i+b+k];
-                }
-            }
-            for (int j = 0; j < n-i-b; ++j) {
-                for (int k = 0; k < n-i-b; ++k) {
-                    A[j*(m-i - b)+ i+ k - b] = 0;
-                    for (int l = 0; l < b; ++l) {
-                        A[j*(m-i - b)+ i+ k - b] = U23[j*b+l]*LU2223[l*s2+k+b];
-                    }
-                }
-            }
-        }
-    }
-}
-
-/*
-void LU_Blocks_parallel(double* &A, int n, int m, int b){
-    for (int i = 0; i<n-1; i+=b)
-    {
-        auto* subA = new double[(m-i)*b];
-#pragma omp parallel for default(none) shared(A,subA,i,m,b)
-        for (int j = 0; j < m-i; ++j) {
-            for (int k = 0; k < b; ++k) {
-                subA[j*b+k] = A[(j+i)*m+k+i];
-            }
-        }
-        LU_parallel(subA,m-i,b);
-#pragma omp parallel for default(none) shared(A,subA,i,m,b)
-        for (int j = 0; j < m-i; ++j) {
-            for (int k = 0; k < b; ++k) {
-                A[(j+i)*m+k+i] = subA[j*b+k];
-            }
-        }
-        delete[] subA;
-        if ((int) m-i - b > 0) {
-            auto* subL = new double[b*b];
-#pragma omp parallel for default(none) shared(A,subL,i,m,b)
-            for (int j = 0; j < b; ++j) {
-                subL[j*b+j] = 1;
-                for (int k = j; k < b; ++k) {
-                    subL[j*b+k] = 0;
-                }
-                for (int k = 0; k < j; ++k) {
-                    subL[j*b+k] = A[(j+i)*m+k+i];
-                }
-            }
-            double* subL1 = inverse_L_parallel(subL,b);
-            delete[] subL;
-            subA = new double[b*(m-i - b)];
-#pragma omp parallel for default(none) shared(A,subA,i,m,b)
-            for (int j = 0; j < b; ++j) {
-                for (int k = b; k < m-i; ++k) {
-                    subA[j*(m-i - b)+k - b] = A[(j+i)*m+k+i];
-                }
-            }
-            double* subA1 = prod_parallel(subL1,b,b,subA,b,m-i-b);
-            delete[] subL1;
-            delete[] subA;
-#pragma omp parallel for default(none) shared(A,subA1,i,m,b)
-            for (int j = 0; j < b; ++j) {
-                for (int k = b; k < m-i; ++k) {
-                    A[(j+i)*m+k+i] = subA1[j*(m-i-b)+k - b];
-                }
-            }
-            delete[] subA1;
-            subA1 = new double[(m-i - b)*b];
-#pragma omp parallel for default(none) shared(A,subA1,i,m,b)
-            for (int j = b; j < m-i; ++j) {
-                for (int k = 0; k < b; ++k) {
-                    subA1[(j - b)*b+k] = A[(j+i)*m+k+i];
-                }
-            }
-            auto* subA2 = new double[b*(m-i - b)];
-#pragma omp parallel for default(none) shared(A,subA2,i,m,b)
-            for (int j = 0; j < b; ++j) {
-                for (int k = b; k < m-i; ++k) {
-                    subA2[j*(m-i-b)+k - b] = A[(j+i)*m+k+i];
-                }
-            }
-            subA = prod_parallel(subA1,m-i-b,b,subA2,b,m-i-b);
-            delete[] subA1;
-            delete[] subA2;
-#pragma omp parallel for default(none) shared(A,subA,i,m,b)
-            for (int j = b; j < m-i; ++j) {
-                for (int k = b; k < m-i; ++k) {
-                    A[(j+i)*m+k+i] = A[(j+i)*m+i+k] - subA[(j - b)*(m-i-b)+k - b];
-                }
-            }
-            delete[] subA;
-        }
-    }
-}
-*/
 
 int main() {
     omp_set_dynamic(0);
@@ -295,9 +338,9 @@ int main() {
         }
     }
     double time2 = t2-t1;
-    int block = 4;
+    int block = 32;
     t1 = omp_get_wtime();
-    LU_Blocks(B3,n,m,block);
+    two_ten(B3,n,block);
     t2 = omp_get_wtime();
     double err2 = 0;
     for (int i = 0; i < n*m; ++i) {
@@ -306,6 +349,9 @@ int main() {
         }
     }
     double time3 = t2-t1;
+    t1 = omp_get_wtime();
+    two_ten_parallel(B4,n,block);
+    t2 = omp_get_wtime();
     double err3 = 0;
     for (int i = 0; i < n*m; ++i) {
         if (err3 < std::abs(B1[i]-B4[i])) {
@@ -313,15 +359,13 @@ int main() {
         }
     }
     double time4 = t2-t1;
-    /*std::cout << "Неблочное LU-разложение без распараллеливания" << std::endl << "Время: " <<
+    std::cout << "Неблочное LU-разложение без распараллеливания" << std::endl << "Время: " <<
               time1 << std::endl <<"Неблочное LU-разложение с распараллеливанием" << std::endl << "Время " << time2 <<
               "  Ошибка в сравнении с первыи разложением: " << err1 << std::endl
               << "Ускорение " << time1/time2 << std::endl
               << "Блочное LU-разложение без распараллеливания"<< std::endl << "Время: " << time3 << "  Ошибка в сравнении с первыи разложением: "
               << err2 << std::endl
               << "Блочное LU-разложение с распараллеливанием" << std::endl << "Время: " << time4
-              << "  Ошибка в сравнении с первыи разложением: " << err3 << std::endl << "Ускорение " << time3/time4 << std::endl;*/
-    matrix_out(B1,n,n);
-    matrix_out(B3,n,n);
+              << "  Ошибка в сравнении с первыи разложением: " << err3 << std::endl << "Ускорение " << time3/time4 << std::endl;
     return 0;
 }
