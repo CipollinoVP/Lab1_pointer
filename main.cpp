@@ -231,7 +231,6 @@ void two_ten_parallel(double*& A, int n, int b) {
 
         //(1)
         for (int y = 0; y < a1; y++)
-#pragma omp parallel for default(none) shared(L2232,n,i,A,b,y)
             for (int z = 0; z < b; z++) {
                 L2232[y * b + z] = A[(y + i) * n + (i + z)];
             }
@@ -239,8 +238,7 @@ void two_ten_parallel(double*& A, int n, int b) {
         LU_parallel(L2232, a1, b);
 
         for (int y = 0; y < (a1); y++)
-#pragma omp parallel for default(none) shared(L2232,n,i,A,b,y)
-                for (int z = 0; z < b; z++) {
+            for (int z = 0; z < b; z++) {
                 A[(y + i) * n + (i + z)] = L2232[y * b + z];
             }
         //(1)
@@ -248,7 +246,6 @@ void two_ten_parallel(double*& A, int n, int b) {
         if ((n - b - i) > 0) {
             //(2)
             for (int y = 0; y < b; y++) {
-#pragma omp parallel for default(none) shared(n,i,A,b,y,a2,U23)
                 for (int z = 0; z < a2; z++) {
                     U23[y*a2 + z] = A[(y + i) * n + z + i + b];
                 }
