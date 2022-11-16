@@ -2,6 +2,7 @@
 #include "omp.h"
 #include <ctime>
 #include <cmath>
+#include <fstream>
 
 
 using namespace std;
@@ -298,6 +299,7 @@ double* difference(double* const& right, int r_n, int r_m,
 
 
 int main() {
+    std::ofstream out("/nethome/student/FS19/FS2-x1/Popov_Kiseleva/Lab1_pointer/out.txt");
     omp_set_dynamic(0);
     omp_set_num_threads(8);
     int a = 5;
@@ -353,7 +355,7 @@ int main() {
             }
         }
         double time4 = t2-t1;
-        std::cout << n << std::endl << "Неблочное LU-разложение без распараллеливания" << std::endl << "Время: " <<
+        out << n << std::endl << "Неблочное LU-разложение без распараллеливания" << std::endl << "Время: " <<
                   time1 << std::endl <<"Неблочное LU-разложение с распараллеливанием" << std::endl << "Время " << time2 <<
                   "  Ошибка в сравнении с первыи разложением: " << err1 << std::endl
                   << "Ускорение " << time1/time2 << std::endl
