@@ -222,7 +222,7 @@ void two_ten_parallel(double*& A, int n, int b) {
     int a2 = n - b;
     auto* L2232 = new double[a1 * b];
     auto* U23 = new double[b * a2];
-    auto* Lh = new double[n*n];
+    auto* Lh = new double[b*b*2];
     for (int i = 0; i < n - 1; i += b) {
         a1 = (n - i);
         a2 = (n - b - i);
@@ -304,7 +304,7 @@ int main() {
     omp_set_num_threads(8);
     int a = 5;
     srand(time(0));
-    for (int n = 256; n <= 8192; n*=2) {
+    int n = 8192;
         int m;
         m = n;
         auto* A = new double[n*m];
@@ -371,7 +371,6 @@ int main() {
         delete[] B2;
         delete[] B3;
         delete[] B4;
-    }
     std::cout << "Готово";
     return 0;
 }
