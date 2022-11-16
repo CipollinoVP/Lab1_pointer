@@ -372,5 +372,6 @@ int main() {
         delete[] B3;
         delete[] B4;
     }
+    std::cout << "Готово";
     return 0;
 }
