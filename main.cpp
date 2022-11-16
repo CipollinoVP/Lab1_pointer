@@ -98,8 +98,7 @@ void LU_parallel(double* A, const int n, const int m)
     }
 }
 
-void inverse_L(double* & L, int n, int n1){
-    auto* L1 = new double[n*n];
+void inverse_L(double* & L, double* & L1, int n, int n1){
     for (int i = 0; i < n; ++i) {
         for (int j = 0; j < n; ++j) {
             L1[i*n+j] = 0;
@@ -118,12 +117,10 @@ void inverse_L(double* & L, int n, int n1){
             L[i*n1+j] = L1[i*n+j];
         }
     }
-    delete[] L1;
 }
 
 
-void inverse_L_parallel(double* & L, int n, int n1){
-    auto* L1 = new double[n*n];
+void inverse_L_parallel(double* & L, double* & L1, int n, int n1){
     for (int i = 0; i < n; ++i) {
 #pragma omp parallel for default(none) shared(L,n,L1,n1,i)
         for (int j = 0; j < n; ++j) {
@@ -145,7 +142,6 @@ void inverse_L_parallel(double* & L, int n, int n1){
             L[i*n1+j] = L1[i*n+j];
         }
     }
-    delete[] L1;
 }
 
 //алгоритм 2.10
@@ -154,7 +150,7 @@ void two_ten(double*& A, int n, int b) {
     int a2 = n - b;
     auto* L2232 = new double[a1 * b];
     auto* U23 = new double[b * a2];
-
+    auto* Lh = new double[n*n];
     for (int i = 0; i < n - 1; i += b) {
         a1 = (n - i);
         a2 = (n - b - i);
@@ -180,7 +176,7 @@ void two_ten(double*& A, int n, int b) {
                     U23[y*a2 + z] = A[(y + i) * n + z + i + b];
                 }
             }
-            inverse_L(L2232,b,b);
+            inverse_L(L2232,Lh,b,b);
             for (int y = 0; y < b; y++) {
                 for (int z = 0; z < (a2); z++) {
                     A[(y + i) * n + z + i + b] = 0;
@@ -224,7 +220,7 @@ void two_ten_parallel(double*& A, int n, int b) {
     int a2 = n - b;
     auto* L2232 = new double[a1 * b];
     auto* U23 = new double[b * a2];
-
+    auto* Lh = new double[n*n];
     for (int i = 0; i < n - 1; i += b) {
         a1 = (n - i);
         a2 = (n - b - i);
@@ -250,7 +246,7 @@ void two_ten_parallel(double*& A, int n, int b) {
                     U23[y*a2 + z] = A[(y + i) * n + z + i + b];
                 }
             }
-            inverse_L_parallel(L2232,b,b);
+            inverse_L_parallel(L2232,Lh,b,b);
 #pragma omp parallel for default(none) shared(L2232,n,i,A,b,a2,U23)
             for (int y = 0; y < b; y++) {
                 for (int z = 0; z < (a2); z++) {
