@@ -304,7 +304,7 @@ int main() {
     omp_set_num_threads(8);
     int a = 5;
     srand(time(0));
-    int n = 8192;
+    int n = 512;
         int m;
         m = n;
         auto* A = new double[n*m];
@@ -334,7 +334,7 @@ int main() {
             }
         }
         double time2 = t2-t1;
-        int block = 32;
+        int block = 1;
         t1 = omp_get_wtime();
         two_ten(B3,n,block);
         t2 = omp_get_wtime();
