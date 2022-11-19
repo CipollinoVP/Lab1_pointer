@@ -334,7 +334,7 @@ int main() {
             }
         }
         double time2 = t2-t1;
-        int block = 64;
+        int block = 32;
         t1 = omp_get_wtime();
         two_ten(B3,n,block);
         t2 = omp_get_wtime();
@@ -355,7 +355,7 @@ int main() {
             }
         }
         double time4 = t2-t1;
-        out << n << std::endl << "Неблочное LU-разложение без распараллеливания" << std::endl << "Время: " <<
+        out << n << std::endl << block << std::endl << std::endl << "Неблочное LU-разложение без распараллеливания" << std::endl << "Время: " <<
                   time1 << std::endl <<"Неблочное LU-разложение с распараллеливанием" << std::endl << "Время " << time2 <<
                   "  Ошибка в сравнении с первыи разложением: " << err1 << std::endl
                   << "Ускорение " << time1/time2 << std::endl
@@ -366,11 +366,65 @@ int main() {
                   std::endl << "Блочный/не блочный 1" << std::endl << time2/time1 << std::endl << "Блочный/не блочный 2" <<
                   std::endl << time4/time3 << std::endl << "Максимальное отношение времени:" << std::endl <<
                   time4/time1 << std::endl;
-        delete[] A;
-        delete[] B1;
-        delete[] B2;
-        delete[] B3;
-        delete[] B4;
+    block = 64;
+    for (int i = 0; i < n*m; ++i) {
+        A[i] = (double)rand() /RAND_MAX;
+        B1[i] = A[i];
+        B2[i] = A[i];
+        B3[i] = A[i];
+        B4[i] = A[i];
+    }
+    t1 = omp_get_wtime();
+    LU(B1,n,m);
+    t2 = omp_get_wtime();;
+    time1 = t2-t1;
+    t1 = omp_get_wtime();
+    LU_parallel(B2,n,m);
+    t2 = omp_get_wtime();
+    err1 = 0;
+    for (int i = 0; i < n*m; ++i) {
+        if (err1 < std::abs(B1[i]-B2[i])) {
+            err1 = std::abs(B1[i]-B2[i]);
+        }
+    }
+    time2 = t2-t1;
+    block = 64;
+    t1 = omp_get_wtime();
+    two_ten(B3,n,block);
+    t2 = omp_get_wtime();
+    err2 = 0;
+    for (int i = 0; i < n*m; ++i) {
+        if (err2 < std::abs(B1[i]-B3[i])) {
+            err2 = std::abs(B1[i]-B3[i]);
+        }
+    }
+    time3 = t2-t1;
+    t1 = omp_get_wtime();
+    two_ten_parallel(B4,n,block);
+    t2 = omp_get_wtime();
+    err3 = 0;
+    for (int i = 0; i < n*m; ++i) {
+        if (err3 < std::abs(B1[i]-B4[i])) {
+            err3 = std::abs(B1[i]-B4[i]);
+        }
+    }
+    time4 = t2-t1;
+    out << n << std::endl << block << std::endl << "Неблочное LU-разложение без распараллеливания" << std::endl << "Время: " <<
+        time1 << std::endl <<"Неблочное LU-разложение с распараллеливанием" << std::endl << "Время " << time2 <<
+        "  Ошибка в сравнении с первыи разложением: " << err1 << std::endl
+        << "Ускорение " << time1/time2 << std::endl
+        << "Блочное LU-разложение без распараллеливания"<< std::endl << "Время: " << time3 << "  Ошибка в сравнении с первыи разложением: "
+        << err2 << std::endl
+        << "Блочное LU-разложение с распараллеливанием" << std::endl << "Время: " << time4
+        << "  Ошибка в сравнении с первыи разложением: " << err3 << std::endl << "Ускорение " << time3/time4 <<
+        std::endl << "Блочный/не блочный 1" << std::endl << time2/time1 << std::endl << "Блочный/не блочный 2" <<
+        std::endl << time4/time3 << std::endl << "Максимальное отношение времени:" << std::endl <<
+        time4/time1 << std::endl;
+    delete[] A;
+    delete[] B1;
+    delete[] B2;
+    delete[] B3;
+    delete[] B4;
     std::cout << "Готово" << std::endl;
     return 0;
 }
