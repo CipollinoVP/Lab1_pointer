@@ -304,7 +304,7 @@ int main() {
     omp_set_num_threads(16);
     int a = 5;
     srand(time(0));
-    int n = 2048;
+    int n = 8192;
         int m;
         m = n;
         auto* A = new double[n*m];
