@@ -151,7 +151,7 @@ void two_ten(double*& A, int n, int b) {
     int a2 = n - b;
     auto* L2232 = new double[a1 * b];
     auto* U23 = new double[b * a2];
-    auto* Lh = new double[b*b];
+    auto* Lh = new double[2*b*b];
     for (int i = 0; i < n - 1; i += b) {
         a1 = (n - i);
         a2 = (n - b - i);
@@ -222,7 +222,7 @@ void two_ten_parallel(double*& A, int n, int b) {
     int a2 = n - b;
     auto* L2232 = new double[a1 * b];
     auto* U23 = new double[b * a2];
-    auto* Lh = new double[b*b];
+    auto* Lh = new double[2*b*b];
     for (int i = 0; i < n - 1; i += b) {
         a1 = (n - i);
         a2 = (n - b - i);
