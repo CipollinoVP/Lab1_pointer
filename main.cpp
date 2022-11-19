@@ -301,7 +301,7 @@ double* difference(double* const& right, int r_n, int r_m,
 int main() {
     std::ofstream out("/nethome/student/FS19/FS2-x1/Popov_Kiseleva/Lab1_pointer/out.txt");
     omp_set_dynamic(0);
-    omp_set_num_threads(8);
+    omp_set_num_threads(16);
     int a = 5;
     srand(time(0));
     int n = 2048;
