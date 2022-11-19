@@ -334,7 +334,7 @@ int main() {
             }
         }
         double time2 = t2-t1;
-        int block = 1;
+        int block = 512;
         t1 = omp_get_wtime();
         two_ten(B3,n,block);
         t2 = omp_get_wtime();
